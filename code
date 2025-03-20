@@ -1,0 +1,44 @@
+import requests
+import gspread
+from bs4 import BeautifulSoup
+from oauth2client.service_account import ServiceAccountCredentials
+
+def get_keywords_from_sheet(sheet_url):
+    # Authenticate with Google Sheets API
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    creds = ServiceAccountCredentials.from_json_keyfile_name("your-credentials.json", scope)
+    client = gspread.authorize(creds)
+    
+    # Open the sheet by URL and read the keywords (assuming first column)
+    sheet = client.open_by_url(sheet_url).sheet1  # Change sheet1 if needed
+    keywords = sheet.col_values(1)
+    return keywords
+
+def get_blog_content(blog_url):
+    response = requests.get(blog_url)
+    if response.status_code == 200:
+        soup = BeautifulSoup(response.text, "html.parser")
+        return soup.get_text()
+    return ""
+
+def check_keywords_in_blog(keywords, blog_content):
+    results = []
+    for keyword in keywords:
+        status = "Found" if keyword.lower() in blog_content.lower() else "Not Found"
+        results.append([keyword, status])
+    return results
+
+def main(sheet_url, blog_url):
+    keywords = get_keywords_from_sheet(sheet_url)
+    blog_content = get_blog_content(blog_url)
+    results = check_keywords_in_blog(keywords, blog_content)
+    
+    # Print results in a format suitable for Google Sheets
+    print("Keyword,Status")
+    for keyword, status in results:
+        print(f"{keyword},{status}")
+
+# Example usage
+sheet_url = "YOUR_GOOGLE_SHEET_URL"
+blog_url = "YOUR_BLOG_POST_URL"
+main(sheet_url, blog_url)
